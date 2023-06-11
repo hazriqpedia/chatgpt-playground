@@ -1,16 +1,21 @@
 import FormSection from './components/FormSection';
 import AnswerSection from './components/AnswerSection';
+import BouncingDotsLoader from './components/BouncingDots';
 import { OpenAIClient, AzureKeyCredential } from '@azure/openai'
 import { useState } from 'react';
 
 const App = () => {
   const [storedValues, setStoredValues] = useState([]);
+  const [isLoadingData, setLoadingData] = useState(false);
   const chatGPT35TurboModel = 'gpt-35-turbo'
 
   const generateResponse = async (inputs, setInputs) => {
+    const endpoint = inputs.endpoint || process.env.REACT_APP_AZURE_OPENAI_ENDPOINT;
+    const key = inputs.key || process.env.REACT_APP_AZURE_OPENAI_KEY;
     try {
+      setLoadingData(true);
       const t0 = performance.now();
-      const openai = new OpenAIClient(inputs.endpoint, new AzureKeyCredential(inputs.key));
+      const openai = new OpenAIClient(endpoint, new AzureKeyCredential(key));
       const response = await openai.getChatCompletions(chatGPT35TurboModel, [{ role: "user", content: inputs.prompt }]);
       const t1 = performance.now();
       for (const choice of response.choices) {
@@ -26,6 +31,7 @@ const App = () => {
             ...storedValues,
           ]);
           setInputs({ ...inputs, prompt: '' });
+          setLoadingData(false);
         }
       }
     } catch (error) {
@@ -33,6 +39,10 @@ const App = () => {
     }
 
   };
+
+  const clearAnswersEvent = () => {
+    setStoredValues([]);
+  }
   return (
     <div>
       <div className="header-section">
@@ -44,7 +54,8 @@ const App = () => {
       </div>
 
       <FormSection generateResponse={generateResponse} />
-      <AnswerSection storedValues={storedValues} />
+      <BouncingDotsLoader isLoadingData={isLoadingData} />
+      <AnswerSection storedValues={storedValues} clearAnswersEvent={clearAnswersEvent} />
     </div>
   );
 };
